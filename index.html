@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tapouts · Leadership dashboard</title>
+<style>
+:root{--bg:#0c0f14;--panel:#141922;--line:#232a36;--text:#e8edf5;--muted:#8b95a8;--warn:#fbbf24;--bad:#f87171;--g:#34d399;--m:#fb923c}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:13px/1.4 "IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+h1{font-size:17px;font-weight:600;margin:0}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:18px 0 8px;font-weight:600}
+.band{margin-top:4px}
+.band-hd{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.band-hd h2{margin:0;font-size:12px;letter-spacing:.1em;color:var(--text);text-transform:uppercase}
+.band-hd .sub{color:var(--muted);font-size:11px}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 20px 40px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.sub{color:var(--muted);font-size:12px}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.controls button,.controls input[type=date]{
+  background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;
+  padding:6px 10px;font:inherit;cursor:pointer
+}
+.controls button:hover{border-color:#3b82f6}
+.controls button:disabled{opacity:.5;cursor:not-allowed}
+.controls .day-nav{display:flex;align-items:center;gap:4px}
+.controls .day-nav button{padding:6px 8px;min-width:32px}
+.toast{font-size:11px;color:var(--muted);min-height:16px}
+.toast.ok{color:var(--g)}
+.toast.err{color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.kpis6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.kpis7{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.card .lbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+.card .val{font-size:22px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+.card .hint{color:var(--muted);font-size:11px;margin-top:2px}
+.card.b2b{border-color:#3f3a1d;background:#16140e}
+.card.b2b .val{color:var(--warn)}
+.health{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.health .val{font-size:18px}
+.chartbox{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.barrow{display:grid;grid-template-columns:40px 1fr 56px;gap:8px;align-items:center;margin:4px 0}
+.blab{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.btrack{height:12px;background:#0c0f14;border-radius:3px}
+.b1{height:100%;border-radius:3px;background:#1e3a5f}
+.b1.imm{background:#3f3a1d}
+.bval{font-variant-numeric:tabular-nums;font-size:12px;text-align:right}
+.star{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin-top:8px}
+th{text-align:right;color:var(--muted);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:6px 7px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:6px 7px;border-bottom:1px solid #1c222c}
+td.r{text-align:right}
+tr.immature td{color:#c5c0a8}
+tr.total td{font-weight:650;border-top:1px solid var(--line)}
+.note{color:var(--muted);font-size:11px;margin:8px 0 0}
+.leg{color:var(--muted);font-size:10px;margin-top:6px}
+.mix{display:flex;height:10px;border-radius:3px;overflow:hidden;background:#0c0f14;margin-top:6px}
+.mix .m{background:#fb923c}
+.mix .g{background:#34d399}
+footer{margin-top:20px;color:var(--muted);font-size:11px;line-height:1.55;border-top:1px solid var(--line);padding-top:12px}
+.d14bars{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:90px;margin-top:8px}
+.d14bar{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px}
+.d14bar .fill{width:100%;border-radius:3px 3px 0 0;background:#3b82f6;min-height:2px}
+.d14bar.we .fill{background:#6366f1;opacity:.85}
+.d14bar .dl{color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums}
+.d14bar .dv{color:var(--muted);font-size:9px;font-variant-numeric:tabular-nums}
+tr.pending td{color:var(--muted);font-style:italic}
+.orient{color:var(--muted);font-size:11px;margin:8px 0 0;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.loading{color:var(--muted);padding:40px 0;text-align:center}
+@media(max-width:900px){.kpis,.kpis6,.kpis7,.health{grid-template-columns:repeat(2,1fr)}.d14bars{grid-template-columns:repeat(6,1fr);height:110px}}
+</style></head><body>
+<div class="wrap" id="app">
+  <div class="loading" id="boot">Loading board.json…</div>
+</div>
+<script>
+(function () {
+  const $ = (sel, el) => (el || document).querySelector(sel);
+  let board = null;
+  let selectedDate = null;
+  let lastRefreshed = null;
+
+  function money(n, digs) {
+    if (n == null || Number.isNaN(n)) return "—";
+    const d = digs == null ? 0 : digs;
+    return "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d });
+  }
+  function num(n) {
+    if (n == null || Number.isNaN(n)) return "—";
+    return Number(n).toLocaleString("en-US");
+  }
+  function pct(v, digs) {
+    if (v == null || Number.isNaN(v)) return "—";
+    return (v * 100).toFixed(digs == null ? 1 : digs) + "%";
+  }
+  function parseYMD(s) {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function fmtShort(s) {
+    const dt = parseYMD(s);
+    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  function fmtDayLabel(s) {
+    const dt = parseYMD(s);
+    const wd = dt.toLocaleDateString("en-US", { weekday: "short" });
+    const md = (dt.getMonth() + 1) + "/" + dt.getDate();
+    const we = (dt.getDay() === 0 || dt.getDay() === 6) ? " · we" : "";
+    return wd + " " + md + we;
+  }
+  function isWeekend(s) {
+    const dt = parseYMD(s);
+    return dt.getDay() === 0 || dt.getDay() === 6;
+  }
+  function dayByDate(date) {
+    if (!board) return null;
+    if (date === board.today_date && board.today) {
+      // Prefer today object, but merge day row if present
+      const fromDays = (board.days || []).find(d => d.date === date);
+      if (fromDays) return Object.assign({}, board.today, fromDays);
+      return board.today;
+    }
+    return (board.days || []).find(d => d.date === date) || null;
+  }
+  function availableDates() {
+    const set = new Set((board.days || []).map(d => d.date));
+    if (board.today_date) set.add(board.today_date);
+    return Array.from(set).sort();
+  }
+  function toast(msg, kind) {
+    const t = $("#toast");
+    if (!t) return;
+    t.textContent = msg || "";
+    t.className = "toast" + (kind ? " " + kind : "");
+  }
+
+  function opsDayCard(day, opts) {
+    opts = opts || {};
+    const isToday = day && day.date === board.today_date;
+    const title = opts.title || (isToday ? "Today" : "Ops day · " + fmtShort(day.date));
+    const subBits = [];
+    if (isToday) subBits.push("PT calendar day · " + day.date);
+    else subBits.push("Viewing " + day.date + " · not live today");
+    if (board.stripe_parents_through) subBits.push("Stripe parents through " + fmtShort(board.stripe_parents_through));
+
+    const spendHint = (day.google_spend != null || day.meta_spend != null)
+      ? ("G " + money(day.google_spend) + " · M " + money(day.meta_spend))
+      : (day.status === "pending_pull" ? "pending pull" : "—");
+    const parentsHint = day.parents_complete === false
+      ? (day.new_parents == null ? "pending · incomplete" : "incomplete")
+      : "Unique email · first trial that day";
+    const cacHint = day.trial_cac == null
+      ? (day.parents_complete === false ? "parents pending" : "—")
+      : "G+M spend / new parents";
+    const cashVal = day.first_cash_event_day;
+    const cashHint = cashVal != null
+      ? "Unique emails · first_cash_paid_at PT = that day"
+      : "not available for this day";
+    let plat = "—";
+    let platHint = "not pulled for this day";
+    if (day.meta_pixel_cpa != null || day.google_start_trial_cpa != null) {
+      plat = (day.meta_pixel_cpa != null ? money(day.meta_pixel_cpa) : "—") +
+        " / " + (day.google_start_trial_cpa != null ? money(day.google_start_trial_cpa) : "—");
+      platHint = "Meta pixel CPA / Google StartTrial CPA";
+    }
+
+    let note = "";
+    if (day.note) note = day.note;
+    else if (day.status === "pending_pull") note = "Spend and parents pending pull for " + day.date + ".";
+    else if (day.parents_complete === false) {
+      note = "Parents incomplete for " + fmtShort(day.date) + " (Stripe through " +
+        fmtShort(board.stripe_parents_through) + "). Spend shown if present; CAC held.";
+    }
+
+    return `
+<section class="band" id="band-ops">
+  <div class="band-hd">
+    <h2>${title}</h2>
+    <div class="sub">${subBits.join(" · ")}</div>
+  </div>
+  <div class="kpis">
+    <div class="card">
+      <div class="lbl">Spend (G+M)</div>
+      <div class="val">${money(day.spend)}</div>
+      <div class="hint">${spendHint}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">New parents</div>
+      <div class="val">${num(day.new_parents)}</div>
+      <div class="hint">${parentsHint}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Blended trial CAC</div>
+      <div class="val">${money(day.trial_cac)}</div>
+      <div class="hint">${cacHint}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">First cash · event-day</div>
+      <div class="val">${num(cashVal)}</div>
+      <div class="hint">${cashHint}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Meta pixel CPA / Google StartTrial CPA</div>
+      <div class="val" style="font-size:18px">${plat}</div>
+      <div class="hint">${platHint}</div>
+    </div>
+  </div>
+  ${note ? `<p class="note">${note}</p>` : ""}
+</section>`;
+  }
+
+  function yesterdayBand() {
+    const y = board.yesterday || {};
+    const label = fmtShort(y.date) + " (last complete)";
+    let plat = "—";
+    let platHint = "not pulled for this day";
+    if (y.meta_pixel_cpa != null || y.google_start_trial_cpa != null) {
+      plat = (y.meta_pixel_cpa != null ? money(y.meta_pixel_cpa) : "—") +
+        " / " + (y.google_start_trial_cpa != null ? money(y.google_start_trial_cpa) : "—");
+      platHint = "Meta pixel CPA / Google StartTrial CPA";
+    }
+    // Pending note from latest incomplete days
+    const pending = (board.days || []).filter(d => d.parents_complete === false);
+    let pendNote = board.note || "";
+    if (pending.length) {
+      const bits = pending.map(d => {
+        const sp = d.spend != null ? money(d.spend) + " (G " + money(d.google_spend) + " · M " + money(d.meta_spend) + ")" : "spend —";
+        return fmtShort(d.date) + " spend " + sp + " · parents pending";
+      });
+      pendNote = bits.join(" · ") + " — not shown as certainty.";
+    }
+    return `
+<section class="band" id="band-yesterday">
+  <div class="band-hd">
+    <h2>Yesterday · reference</h2>
+    <div class="sub">PT day used: ${label} · Stripe through ${fmtShort(board.stripe_parents_through)}</div>
+  </div>
+  <div class="kpis">
+    <div class="card">
+      <div class="lbl">Spend (G+M) · ${label}</div>
+      <div class="val">${money(y.spend)}</div>
+      <div class="hint">G ${money(y.google_spend)} · M ${money(y.meta_spend)}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">New parents · ${label}</div>
+      <div class="val">${num(y.new_parents)}</div>
+      <div class="hint">Unique email · first trial that day</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Blended trial CAC · ${label}</div>
+      <div class="val">${money(y.trial_cac)}</div>
+      <div class="hint">G+M spend / new parents</div>
+    </div>
+    <div class="card">
+      <div class="lbl">First cash · event-day · ${label}</div>
+      <div class="val">${num(y.first_cash_event_day)}</div>
+      <div class="hint">Unique emails · first_cash_paid_at PT = that day</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Meta pixel CPA / Google StartTrial CPA</div>
+      <div class="val">${plat}</div>
+      <div class="hint">${platHint}</div>
+    </div>
+  </div>
+  ${pendNote ? `<p class="note">${pendNote}</p>` : ""}
+</section>`;
+  }
+
+  function augustBand() {
+    const a = board.august || {};
+    const L = board.locked || {};
+    return `
+<section class="band" id="band-august">
+  <div class="band-hd">
+    <h2>Last month · ${a.label || "August"}</h2>
+    <div class="sub">${a.immature ? "Immature cohort · still converting" : "Mature"}</div>
+  </div>
+  <div class="kpis7">
+    <div class="card">
+      <div class="lbl">Spend</div>
+      <div class="val">${money(a.spend)}</div>
+      <div class="hint">G ${money(a.google)} · M ${money(a.meta)}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">New parents</div>
+      <div class="val">${num(a.parents)}</div>
+      <div class="hint">Unique email · first trial</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Trial CAC</div>
+      <div class="val">${money(a.trial_cac)}</div>
+      <div class="hint">Blended G+M / new parents</div>
+    </div>
+    <div class="card">
+      <div class="lbl">First cash</div>
+      <div class="val">${num(a.first_cash)}</div>
+      <div class="hint">Trial-start cohort · in-month</div>
+    </div>
+    <div class="card">
+      <div class="lbl">T→P ${a.immature ? '<span class="star">*</span>' : ""}</div>
+      <div class="val">${pct(a.tp)}</div>
+      <div class="hint">${a.immature ? "Immature · still converting" : "Mature"}</div>
+    </div>
+    <div class="card">
+      <div class="lbl">pLTV / trial</div>
+      <div class="val">${money(a.pltv_trial)}</div>
+      <div class="hint">LTV:CAC ${a.ltv_cac}x</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Spend mix</div>
+      <div class="val" style="font-size:16px;margin-top:6px">Meta ${Math.round(a.meta_pct)}% · Google ${Math.round(a.google_pct)}%</div>
+      <div class="mix"><div class="m" style="width:${a.meta_pct}%"></div><div class="g" style="width:${a.google_pct}%"></div></div>
+    </div>
+  </div>
+  <div class="orient">Mature T→P ${pct(L.mature_tp)} · pLTV ${money(L.pltv_first_paid)} locked <span style="opacity:.8">(Jan–Jun 2026 · use for CAC framing, not Aug’s open T→P)</span></div>
+</section>`;
+  }
+
+  function restBand() {
+    const h = board.health || {};
+    const days = board.days || [];
+    const complete = days.filter(d => d.parents_complete && d.trial_cac != null);
+    const maxCac = Math.max(...complete.map(d => d.trial_cac), 1);
+    const bars = complete.map(d => {
+      const hgt = Math.max(2, Math.round((d.trial_cac / maxCac) * 100));
+      const we = isWeekend(d.date) ? " we" : "";
+      const title = d.date + " · " + money(d.trial_cac) + (isWeekend(d.date) ? " · weekend" : "");
+      const md = (parseYMD(d.date).getMonth() + 1) + "/" + parseYMD(d.date).getDate();
+      return `<div class="d14bar${we}" title="${title}"><div class="dv">${money(d.trial_cac)}</div><div class="fill" style="height:${hgt}%"></div><div class="dl">${md}</div></div>`;
+    }).join("");
+
+    const rows = days.map(d => {
+      const pending = !d.parents_complete;
+      const cls = pending ? ' class="pending"' : "";
+      return `<tr${cls}><td>${fmtDayLabel(d.date)}</td>
+        <td class="r">${money(d.spend)}</td>
+        <td class="r">${money(d.google_spend)}</td>
+        <td class="r">${money(d.meta_spend)}</td>
+        <td class="r">${pending ? "—" : num(d.new_parents)}</td>
+        <td class="r">${pending || d.trial_cac == null ? "—" : money(d.trial_cac)}</td>
+        <td class="r">${pending || d.trail7_cac == null ? "—" : money(d.trail7_cac)}</td></tr>`;
+    }).join("");
+
+    const tpBars = (board.tp_2026 || []).map(r => {
+      const imm = r.immature ? " imm" : "";
+      const star = r.immature ? ' <span class="star">*</span>' : "";
+      const w = (r.v * 100).toFixed(1);
+      return `<div class="barrow"><div class="blab">${r.m}${star}</div><div class="btrack"><div class="b1${imm}" style="width:${w}%"></div></div><div class="bval">${w}%</div></div>`;
+    }).join("");
+
+    const cacRows = (board.monthly_cac || []).map(r => {
+      const cls = r.immature ? ' class="immature"' : "";
+      const star = r.immature ? ' <span class="star">*</span>' : "";
+      return `<tr${cls}>
+        <td>${r.month}${star}</td>
+        <td class="r">${money(r.spend)}</td>
+        <td class="r">${num(r.trials)}</td>
+        <td class="r">${num(r.first_cash)}</td>
+        <td class="r">${pct(r.tp)}</td>
+        <td class="r">${money(r.trial_cac)}</td>
+        <td class="r">${r.ltv_cac}x</td>
+      </tr>`;
+    }).join("");
+
+    const rs = board.range_start ? fmtShort(board.range_start) : "";
+    const re = board.range_end ? fmtShort(board.range_end) : "";
+    const through = board.stripe_parents_through ? fmtShort(board.stripe_parents_through) : "";
+
+    return `
+<section class="band" id="band-rest">
+  <div class="band-hd">
+    <h2>Health · trailing · cohorts</h2>
+    <div class="sub">Active / trialing / B2B · last 14d · monthly</div>
+  </div>
+
+  <div class="health">
+    <div class="card"><div class="lbl">Active customers</div><div class="val">${num(h.active_customers)}</div><div class="hint">${num(h.active_seats)} seats</div></div>
+    <div class="card"><div class="lbl">Trialing</div><div class="val">${num(h.trialing)}</div><div class="hint">${num(h.trialing_seats)} seats</div></div>
+    <div class="card b2b"><div class="lbl">B2B ServiceNow</div><div class="val">${money(h.sn_mrr)}/mo</div><div class="hint">${num(h.sn_active)} × $107 · never in consumer CAC/pLTV</div></div>
+  </div>
+
+  <h2>Last 14 days · ${rs} – ${re}</h2>
+  <div class="chartbox">
+    <div class="lbl" style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em">Daily trial CAC · complete days · weekends marked</div>
+    <div class="d14bars" style="grid-template-columns:repeat(${Math.max(complete.length, 1)},1fr)">${bars || "<div class='note'>No complete CAC days</div>"}</div>
+    <div class="leg">Bar height = trial CAC that day. Indigo = Sat/Sun. Parents complete through ${through} only.</div>
+  </div>
+  <table>
+  <tr>
+    <th>Day</th><th>Spend</th><th>G</th><th>M</th><th>Parents</th><th>Trial CAC</th><th>Trail 7d</th>
+  </tr>
+  ${rows}
+  </table>
+  <p class="note">Blended trial CAC = G+M spend / unique-email new parents. Stripe marts through ${through}; later parents — until Sigma refresh. Platform daily CPA not pulled; paid CAC omitted.</p>
+
+  <h2>Trial → paid · 2026 · all channels</h2>
+  <div class="chartbox">
+    ${tpBars}
+    <div class="leg">Unique email, month of first trial. * Jul/Aug still converting. T→P for Jul/Aug is still converting — not used for CAC.</div>
+  </div>
+
+  <h2>Blended trial CAC · Google + Meta spend / new parents</h2>
+  <table>
+  <tr>
+    <th>Month</th><th>Spend</th><th>Trials</th><th>First cash</th><th>T→P</th><th>Trial CAC</th><th>LTV:CAC</th>
+  </tr>
+  ${cacRows}
+  </table>
+  <p class="note">${board.monthly_cac_note || ""}</p>
+</section>`;
+  }
+
+  function footerHtml() {
+    const parts = (board.footer || "").split(/\n\n+/);
+    return `<footer>${parts.map(p => `<div${parts.indexOf(p) ? ' style="margin-top:8px"' : ""}>${p}</div>`).join("")}</footer>`;
+  }
+
+  function renderShell() {
+    const dates = availableDates();
+    const min = dates[0] || board.today_date;
+    const max = dates[dates.length - 1] || board.today_date;
+    const refreshed = lastRefreshed
+      ? lastRefreshed.toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })
+      : "—";
+    $("#app").innerHTML = `
+<div class="top">
+  <div>
+    <h1>Tapouts leadership</h1>
+    <div class="sub">Consumer · unique email · blended trial CAC · Pacific Time</div>
+  </div>
+  <div class="controls">
+    <div class="day-nav">
+      <button type="button" id="btn-prev" title="Previous day">‹</button>
+      <input type="date" id="day-picker" min="${min}" max="${max}" value="${selectedDate || board.today_date}"/>
+      <button type="button" id="btn-next" title="Next day">›</button>
+      <button type="button" id="btn-today" title="Jump to today">Today</button>
+    </div>
+    <button type="button" id="btn-refresh">Refresh</button>
+    <div class="sub">as of ${board.as_of_pt || "—"} · refreshed ${refreshed}</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="band-ops-slot"></div>
+<div id="static-bands"></div>
+`;
+    $("#static-bands").innerHTML = yesterdayBand() + augustBand() + restBand() + footerHtml();
+    wireControls();
+    renderOpsBand();
+  }
+
+  function renderOpsBand() {
+    const day = dayByDate(selectedDate) || {
+      date: selectedDate,
+      spend: null, google_spend: null, meta_spend: null,
+      new_parents: null, trial_cac: null, parents_complete: false,
+      first_cash_event_day: null, status: "missing",
+      note: "No row in board.days for " + selectedDate + "."
+    };
+    const isToday = selectedDate === board.today_date;
+    const title = isToday ? "Today" : ("Ops day · " + fmtShort(selectedDate));
+    $("#band-ops-slot").innerHTML = opsDayCard(day, { title });
+    const picker = $("#day-picker");
+    if (picker) picker.value = selectedDate;
+    const dates = availableDates();
+    const idx = dates.indexOf(selectedDate);
+    const prev = $("#btn-prev");
+    const next = $("#btn-next");
+    if (prev) prev.disabled = idx <= 0;
+    if (next) next.disabled = idx < 0 || idx >= dates.length - 1;
+  }
+
+  function wireControls() {
+    $("#btn-refresh").addEventListener("click", () => loadBoard(true));
+    $("#btn-today").addEventListener("click", () => {
+      selectedDate = board.today_date;
+      renderOpsBand();
+      toast("Showing today · " + board.today_date, "ok");
+    });
+    $("#btn-prev").addEventListener("click", () => {
+      const dates = availableDates();
+      const i = dates.indexOf(selectedDate);
+      if (i > 0) { selectedDate = dates[i - 1]; renderOpsBand(); }
+    });
+    $("#btn-next").addEventListener("click", () => {
+      const dates = availableDates();
+      const i = dates.indexOf(selectedDate);
+      if (i >= 0 && i < dates.length - 1) { selectedDate = dates[i + 1]; renderOpsBand(); }
+    });
+    $("#day-picker").addEventListener("change", (e) => {
+      const v = e.target.value;
+      const dates = availableDates();
+      if (dates.includes(v)) {
+        selectedDate = v;
+        renderOpsBand();
+      } else {
+        toast("No data for " + v, "err");
+        e.target.value = selectedDate;
+      }
+    });
+  }
+
+  async function loadBoard(isRefresh) {
+    const btn = $("#btn-refresh");
+    if (btn) btn.disabled = true;
+    toast(isRefresh ? "Refreshing…" : "Loading…");
+    try {
+      let loaded = null;
+      try {
+        const url = "./board.json?t=" + Date.now();
+        const res = await fetch(url, { cache: "no-store" });
+        if (res.ok) loaded = await res.json();
+      } catch (e) { /* fall through to inline */ }
+      if (!loaded) {
+        const el = document.getElementById("board-inline");
+        if (!el) throw new Error("No board.json and no inline board");
+        loaded = JSON.parse(el.textContent);
+      }
+      board = loaded;
+      lastRefreshed = new Date();
+      if (!selectedDate || !availableDates().includes(selectedDate)) {
+        selectedDate = board.today_date;
+      }
+      renderShell();
+      toast(isRefresh
+        ? ("Refreshed · " + (board.as_of_pt || "ok"))
+        : ("Loaded · as of " + (board.as_of_pt || "")), "ok");
+    } catch (err) {
+      console.error(err);
+      if (!board) {
+        $("#app").innerHTML = `<div class="loading" style="color:var(--bad)">Failed to load board.json: ${err.message}</div>
+          <div style="text-align:center"><button type="button" id="btn-retry" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer">Retry</button></div>`;
+        $("#btn-retry").addEventListener("click", () => loadBoard(false));
+      } else {
+        toast("Refresh failed: " + err.message + " · showing last loaded board", "err");
+        if (btn) btn.disabled = false;
+      }
+    } finally {
+      const b2 = $("#btn-refresh");
+      if (b2) b2.disabled = false;
+    }
+  }
+
+  loadBoard(false);
+})();
+</script>
+<script type="application/json" id="board-inline">{
+  "as_of_pt": "2026-09-04 14:43 PDT",
+  "timezone": "America/Los_Angeles",
+  "today_date": "2026-09-04",
+  "stripe_parents_through": "2026-09-01",
+  "last_complete_day": "2026-09-01",
+  "range_start": "2026-08-21",
+  "range_end": "2026-09-03",
+  "note": "Stripe DuckDB max first-trial PT is 2026-09-01; Sep 2\u20133 parents unavailable until Sigma refresh. CAC cards use last complete day.",
+  "today": {
+    "date": "2026-09-04",
+    "google_spend": null,
+    "meta_spend": null,
+    "spend": null,
+    "new_parents": null,
+    "trial_cac": null,
+    "meta_pixel_trials": null,
+    "meta_pixel_cpa": null,
+    "google_start_trial": null,
+    "google_start_trial_cpa": null,
+    "parents_complete": false,
+    "first_cash_event_day": null,
+    "status": "pending_pull",
+    "note": "Spend/parents pending pull \u2014 Sep 4 not yet in DAILY_14D (range ends Sep 3)."
+  },
+  "days": [
+    {
+      "date": "2026-08-21",
+      "google_spend": 2960.74,
+      "meta_spend": 8166.77,
+      "spend": 11127.51,
+      "new_parents": 56,
+      "trial_cac": 198.71,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 198.71,
+      "trail7_spend": 11127.51,
+      "trail7_parents": 56
+    },
+    {
+      "date": "2026-08-22",
+      "google_spend": 2125.8,
+      "meta_spend": 10243.52,
+      "spend": 12369.32,
+      "new_parents": 64,
+      "trial_cac": 193.27,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 195.81,
+      "trail7_spend": 23496.83,
+      "trail7_parents": 120
+    },
+    {
+      "date": "2026-08-23",
+      "google_spend": 2948.97,
+      "meta_spend": 8818.27,
+      "spend": 11767.24,
+      "new_parents": 55,
+      "trial_cac": 213.95,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 201.51,
+      "trail7_spend": 35264.07,
+      "trail7_parents": 175
+    },
+    {
+      "date": "2026-08-24",
+      "google_spend": 4363.1,
+      "meta_spend": 9707.72,
+      "spend": 14070.82,
+      "new_parents": 78,
+      "trial_cac": 180.4,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 195.0,
+      "trail7_spend": 49334.89,
+      "trail7_parents": 253
+    },
+    {
+      "date": "2026-08-25",
+      "google_spend": 6113.05,
+      "meta_spend": 5345.92,
+      "spend": 11458.97,
+      "new_parents": 48,
+      "trial_cac": 238.73,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 201.97,
+      "trail7_spend": 60793.86,
+      "trail7_parents": 301
+    },
+    {
+      "date": "2026-08-26",
+      "google_spend": 6386.82,
+      "meta_spend": 7595.67,
+      "spend": 13982.49,
+      "new_parents": 67,
+      "trial_cac": 208.69,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 203.2,
+      "trail7_spend": 74776.35,
+      "trail7_parents": 368
+    },
+    {
+      "date": "2026-08-27",
+      "google_spend": 4348.16,
+      "meta_spend": 7819.95,
+      "spend": 12168.11,
+      "new_parents": 61,
+      "trial_cac": 199.48,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 202.67,
+      "trail7_spend": 86944.46,
+      "trail7_parents": 429
+    },
+    {
+      "date": "2026-08-28",
+      "google_spend": 3258.71,
+      "meta_spend": 7996.69,
+      "spend": 11255.4,
+      "new_parents": 41,
+      "trial_cac": 274.52,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 210.32,
+      "trail7_spend": 87072.35,
+      "trail7_parents": 414
+    },
+    {
+      "date": "2026-08-29",
+      "google_spend": 2955.5,
+      "meta_spend": 7995.24,
+      "spend": 10950.74,
+      "new_parents": 37,
+      "trial_cac": 295.97,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 221.33,
+      "trail7_spend": 85653.77,
+      "trail7_parents": 387
+    },
+    {
+      "date": "2026-08-30",
+      "google_spend": 3414.14,
+      "meta_spend": 8007.79,
+      "spend": 11421.93,
+      "new_parents": 37,
+      "trial_cac": 308.7,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 231.19,
+      "trail7_spend": 85308.46,
+      "trail7_parents": 369
+    },
+    {
+      "date": "2026-08-31",
+      "google_spend": 4603.35,
+      "meta_spend": 8308.71,
+      "spend": 12912.06,
+      "new_parents": 57,
+      "trial_cac": 226.53,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 241.81,
+      "trail7_spend": 84149.7,
+      "trail7_parents": 348
+    },
+    {
+      "date": "2026-09-01",
+      "google_spend": 3312.72,
+      "meta_spend": 8609.56,
+      "spend": 11922.28,
+      "new_parents": 81,
+      "trial_cac": 147.19,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": true,
+      "trail7_cac": 222.08,
+      "trail7_spend": 84613.01,
+      "trail7_parents": 381,
+      "first_cash_event_day": 19,
+      "first_cash_event_day_note": "Unique consumer emails (email_key / unmatched:cus_) whose first_cash_paid_at PT date = 2026-09-01. Not paid CAC."
+    },
+    {
+      "date": "2026-09-02",
+      "google_spend": 2383.53,
+      "meta_spend": 7651.77,
+      "spend": 10035.3,
+      "new_parents": null,
+      "trial_cac": null,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": false,
+      "trail7_cac": 256.9,
+      "trail7_spend": 80665.82,
+      "trail7_parents": 314,
+      "first_cash_event_day": null
+    },
+    {
+      "date": "2026-09-03",
+      "google_spend": 2000.22,
+      "meta_spend": 7405.28,
+      "spend": 9405.5,
+      "new_parents": null,
+      "trial_cac": null,
+      "meta_pixel_trials": null,
+      "meta_pixel_cpa": null,
+      "google_start_trial": null,
+      "google_start_trial_cpa": null,
+      "parents_complete": false,
+      "trail7_cac": 307.92,
+      "trail7_spend": 77903.21,
+      "trail7_parents": 253,
+      "first_cash_event_day": null
+    }
+  ],
+  "yesterday": {
+    "date": "2026-09-01",
+    "spend": 11922.28,
+    "new_parents": 81,
+    "trial_cac": 147.19,
+    "trail7_cac": 222.08,
+    "meta_spend": 8609.56,
+    "google_spend": 3312.72,
+    "meta_pixel_cpa": null,
+    "google_start_trial_cpa": null,
+    "first_cash_event_day": 19,
+    "first_cash_event_day_note": "Unique consumer emails (email_key / unmatched:cus_) whose first_cash_paid_at PT date = 2026-09-01. Not paid CAC."
+  },
+  "august": {
+    "label": "August 2026",
+    "spend": 355003,
+    "google": 84871,
+    "meta": 270132,
+    "parents": 1643,
+    "trial_cac": 216,
+    "first_cash": 581,
+    "tp": 0.354,
+    "pltv_trial": 399,
+    "ltv_cac": 1.8,
+    "meta_pct": 76.1,
+    "google_pct": 23.9,
+    "immature": true
+  },
+  "locked": {
+    "mature_tp": 0.516,
+    "pltv_first_paid": 774,
+    "pltv_trial": 399
+  },
+  "health": {
+    "active_customers": 3517,
+    "active_seats": 3704,
+    "trialing": 909,
+    "trialing_seats": 942,
+    "sn_active": 104,
+    "sn_mrr": 11128
+  },
+  "tp_2026": [
+    {
+      "m": "01",
+      "v": 0.529,
+      "immature": false
+    },
+    {
+      "m": "02",
+      "v": 0.495,
+      "immature": false
+    },
+    {
+      "m": "03",
+      "v": 0.507,
+      "immature": false
+    },
+    {
+      "m": "04",
+      "v": 0.523,
+      "immature": false
+    },
+    {
+      "m": "05",
+      "v": 0.54,
+      "immature": false
+    },
+    {
+      "m": "06",
+      "v": 0.497,
+      "immature": false
+    },
+    {
+      "m": "07",
+      "v": 0.449,
+      "immature": true
+    },
+    {
+      "m": "08",
+      "v": 0.354,
+      "immature": true
+    }
+  ],
+  "monthly_cac": [
+    {
+      "month": "2026-05",
+      "spend": 307970,
+      "trials": 1284,
+      "first_cash": 694,
+      "tp": 0.54,
+      "trial_cac": 240,
+      "ltv_cac": 1.7,
+      "immature": false
+    },
+    {
+      "month": "2026-06",
+      "spend": 337140,
+      "trials": 1538,
+      "first_cash": 764,
+      "tp": 0.497,
+      "trial_cac": 219,
+      "ltv_cac": 1.8,
+      "immature": false
+    },
+    {
+      "month": "2026-07",
+      "spend": 484111,
+      "trials": 2196,
+      "first_cash": 985,
+      "tp": 0.449,
+      "trial_cac": 220,
+      "ltv_cac": 1.8,
+      "immature": true
+    },
+    {
+      "month": "2026-08",
+      "spend": 355003,
+      "trials": 1643,
+      "first_cash": 581,
+      "tp": 0.354,
+      "trial_cac": 216,
+      "ltv_cac": 1.8,
+      "immature": true
+    }
+  ],
+  "footer": "As of 2026-09-04 14:41 PT. Consumer excludes $0 HSA and ServiceNow. Customer = unique email / unmatched:cus_. Bid on Meta pixel & Google StartTrial when available; fund on blended trial CAC vs pLTV/trial $399. First-cash event-day = unique emails whose first_cash_paid_at PT date = that day (not paid CAC).\n\nGoogle vs Meta first-touch CAC is not on this page. Meta is 76% of Aug spend and a demand channel; click-path assist is only +12 paid. Presence logging (www\u2192start, fbp/fbc, ever-touch) and a geo holdout are what make channel CAC comparable \u2014 until then, do not split budget on first-touch. 8.9% of 2026 trials are a 2nd+ seat.",
+  "monthly_cac_note": "Spend = Google + Meta account totals (PT). Trials / first cash = unique email, all channels, month of first paid-plan trial. Extra seats on an existing parent are not a CAC event. LTV:CAC = locked pLTV/trial $399 \u00f7 trial CAC. In-month first cash is still open, so it is not a CAC denominator. Jul Meta pixel is Jul 1\u201330 in Ads Manager; spend here is full month. Apr omitted (Google tagging broken). Unmatched / brand still in the trial denominator \u2014 that is the point of blended.",
+  "google_daily_ready": true,
+  "meta_daily_ready": true,
+  "layout_note": "Leadership dashboard rebuilt 2026-09-04 into three bands: Marketers\u00b7Yesterday (Sep 1 last complete), Last month\u00b7August 2026, Rest. No Vercel. No PII. No first-touch G/M CAC on main screen. No paid CAC."
+}
+</script>
+</body></html>
